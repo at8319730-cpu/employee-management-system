@@ -4,41 +4,65 @@ import './App.css';
 function App() {
   const [employees, setEmployees] = useState([]);
   const [form, setForm] = useState({
-    id: '', name: '', email: '', phone: '',
+    empId: '', name: '', email: '', phone: '',
     department: '', designation: '', salary: '', doj: ''
   });
   const [editId, setEditId] = useState(null);
   const [search, setSearch] = useState('');
+  const [errors, setErrors] = useState({});
+
+  const validate = () => {
+    let err = {};
+    if (!form.name) err.name = 'Name is required!';
+    if (!form.email) {
+      err.email = 'Email is required!';
+    } else if (!/\S+@\S+\.\S+/.test(form.email)) {
+      err.email = 'Valid Email required!';
+    }
+    if (!form.phone) err.phone = 'Phone is required!';
+    if (!form.department) err.department = 'Department is required!';
+    if (!form.salary) {
+      err.salary = 'Salary is required!';
+    } else if (isNaN(form.salary)) {
+      err.salary = 'Salary must be numeric!';
+    }
+    return err;
+  };
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setErrors({ ...errors, [e.target.name]: '' });
   };
 
   const handleSubmit = () => {
-    if (!form.name || !form.email || !form.phone) {
-      alert('పేరు, Email, Phone తప్పనిసరి!');
+    const err = validate();
+    if (Object.keys(err).length > 0) {
+      setErrors(err);
       return;
     }
     if (editId !== null) {
       setEmployees(employees.map(emp =>
-        emp.id === editId ? { ...form, id: editId } : emp
+        emp.empId === editId ? { ...form } : emp
       ));
       setEditId(null);
     } else {
-      setEmployees([...employees, { ...form, id: Date.now() }]);
+      const newId = 'EMP' + String(employees.length + 1).padStart(3, '0');
+      setEmployees([...employees, { ...form, empId: newId }]);
     }
-    setForm({ id:'',name:'',email:'',phone:'',
-      department:'',designation:'',salary:'',doj:'' });
+    setForm({ empId:'', name:'', email:'', phone:'',
+      department:'', designation:'', salary:'', doj:'' });
+    setErrors({});
   };
 
   const handleEdit = (emp) => {
     setForm(emp);
-    setEditId(emp.id);
+    setEditId(emp.empId);
+    window.scrollTo(0, 0);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (empId) => {
     if (window.confirm('Delete చేయాలా?')) {
-      setEmployees(employees.filter(emp => emp.id !== id));
+      setEmployees(employees.filter(emp => emp.empId !== empId));
     }
   };
 
@@ -53,22 +77,61 @@ function App() {
 
       <div className="form">
         <h2>{editId ? '✏️ Edit Employee' : '➕ Add Employee'}</h2>
-        <input name="name" placeholder="పేరు / Name *"
-          value={form.name} onChange={handleChange} />
-        <input name="email" placeholder="Email *"
-          value={form.email} onChange={handleChange} />
-        <input name="phone" placeholder="Phone *"
-          value={form.phone} onChange={handleChange} />
-        <input name="department" placeholder="Department"
-          value={form.department} onChange={handleChange} />
-        <input name="designation" placeholder="Designation"
-          value={form.designation} onChange={handleChange} />
-        <input name="salary" placeholder="Salary"
-          value={form.salary} onChange={handleChange} type="number" />
-        <input name="doj" placeholder="Date of Joining"
-          value={form.doj} onChange={handleChange} type="date" />
+
+        {/* Employee ID - Auto Generated */}
+        <div className="field">
+          <input
+            name="empId"
+            placeholder="Employee ID (Auto Generated)"
+            value={editId ? form.empId : ''}
+            disabled
+            style={{ background: '#f0f0f0', color: '#666' }}
+          />
+        </div>
+
+        <div className="field">
+          <input name="name" placeholder="Name *"
+            value={form.name} onChange={handleChange} />
+          {errors.name && <span className="error">{errors.name}</span>}
+        </div>
+
+        <div className="field">
+          <input name="email" placeholder="Email *"
+            value={form.email} onChange={handleChange} />
+          {errors.email && <span className="error">{errors.email}</span>}
+        </div>
+
+        <div className="field">
+          <input name="phone" placeholder="Phone *"
+            value={form.phone} onChange={handleChange} />
+          {errors.phone && <span className="error">{errors.phone}</span>}
+        </div>
+
+        <div className="field">
+          <input name="department" placeholder="Department *"
+            value={form.department} onChange={handleChange} />
+          {errors.department &&
+            <span className="error">{errors.department}</span>}
+        </div>
+
+        <div className="field">
+          <input name="designation" placeholder="Designation"
+            value={form.designation} onChange={handleChange} />
+        </div>
+
+        <div className="field">
+          <input name="salary" placeholder="Salary (Numeric Only) *"
+            value={form.salary} onChange={handleChange} type="number" />
+          {errors.salary && <span className="error">{errors.salary}</span>}
+        </div>
+
+        <div className="field">
+          <input name="doj" placeholder="Date of Joining"
+            value={form.doj} onChange={handleChange} type="date" />
+        </div>
+
         <button onClick={handleSubmit}>
-          {editId ? 'Update చేయండి' : 'Add చేయండి'}
+          {editId ? 'Update Employee' : 'Add Employee'}
         </button>
       </div>
 
@@ -76,36 +139,51 @@ function App() {
         placeholder="🔍 Search by Name or Department..."
         value={search} onChange={e => setSearch(e.target.value)} />
 
-      <table>
-        <thead>
-          <tr>
-            <th>పేరు</th><th>Email</th><th>Phone</th>
-            <th>Department</th><th>Designation</th>
-            <th>Salary</th><th>DOJ</th><th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.length === 0 ? (
-            <tr><td colSpan="8">Employee లేరు!</td></tr>
-          ) : (
-            filtered.map(emp => (
-              <tr key={emp.id}>
-                <td>{emp.name}</td>
-                <td>{emp.email}</td>
-                <td>{emp.phone}</td>
-                <td>{emp.department}</td>
-                <td>{emp.designation}</td>
-                <td>₹{emp.salary}</td>
-                <td>{emp.doj}</td>
-                <td>
-                  <button onClick={() => handleEdit(emp)}>✏️</button>
-                  <button onClick={() => handleDelete(emp.id)}>🗑️</button>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Emp ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Department</th>
+              <th>Designation</th>
+              <th>Salary</th>
+              <th>DOJ</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan="9" style={{ textAlign:'center' }}>
+                  No Employees Found!
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              filtered.map(emp => (
+                <tr key={emp.empId}>
+                  <td>{emp.empId}</td>
+                  <td>{emp.name}</td>
+                  <td>{emp.email}</td>
+                  <td>{emp.phone}</td>
+                  <td>{emp.department}</td>
+                  <td>{emp.designation}</td>
+                  <td>₹{emp.salary}</td>
+                  <td>{emp.doj}</td>
+                  <td>
+                    <button className="edit-btn"
+                      onClick={() => handleEdit(emp)}>✏️</button>
+                    <button className="del-btn"
+                      onClick={() => handleDelete(emp.empId)}>🗑️</button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
